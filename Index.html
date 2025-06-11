@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lord Aroma Guia</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Biblioteca para efeitos sonoros -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        /* Estilos personalizados */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #121212;
+            color: #E0E0E0;
+            overflow: hidden; /* Previne scrollbars das animações */
+        }
+        .font-cinzel {
+            font-family: 'Cinzel', serif;
+        }
+        .gold-text { color: #D4AF37; }
+        .gold-bg { background-color: #D4AF37; }
+        .gold-border { border-color: #D4AF37; }
+        .gold-shadow { box-shadow: 0 0 15px rgba(212, 175, 55, 0.4); }
+        .option-button:hover {
+            background-color: #D4AF37;
+            color: #121212;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(212, 175, 55, 0.5);
+        }
+        
+        /* Animações */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in {
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+        @keyframes fillProgress {
+            from { width: 0%; }
+            to { width: var(--progress-width); }
+        }
+        .progress-bar-inner {
+            animation: fillProgress 0.5s ease-out forwards;
+        }
+
+        /* Animação de perfume flutuante */
+        .perfume-pop {
+            position: absolute;
+            font-size: 24px;
+            opacity: 0;
+            animation: floatUp 1.5s ease-out forwards;
+            pointer-events: none; /* Garante que não interfira com cliques */
+        }
+        @keyframes floatUp {
+            0% { transform: translateY(0) scale(0.5); opacity: 1; }
+            100% { transform: translateY(-80px) scale(1); opacity: 0; }
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <div id="app-container" class="w-full max-w-md mx-auto bg-[#1a1a1a] rounded-2xl shadow-2xl overflow-hidden relative">
+        
+        <!-- Tela de Boas-Vindas -->
+        <div id="welcome-screen" class="p-8 text-center fade-in">
+            <h1 class="font-cinzel text-4xl font-bold gold-text mb-2">Lord Aroma</h1>
+            <h2 class="text-xl mb-4">Guia de Perfumes</h2>
+            <p class="mb-6 text-3xl">👑</p>
+            <p class="mb-6">Olá! 👋 Pronto para descobrir o perfume ideal para você?</p>
+            <input id="user-name" type="text" placeholder="Digite seu nome aqui..." class="w-full p-3 mb-4 bg-[#2a2a2a] border border-gray-600 rounded-lg text-center focus:outline-none focus:border-[#D4AF37] transition-all">
+            <button id="start-btn" class="w-full gold-bg text-black font-bold py-3 px-4 rounded-lg hover:bg-opacity-90 transition-all duration-300 transform hover:scale-105 gold-shadow">
+                Iniciar Descoberta
+            </button>
+        </div>
+
+        <!-- Tela de Perguntas -->
+        <div id="question-screen" class="p-8 hidden fade-in">
+            <div class="w-full bg-gray-700 rounded-full h-2.5 mb-6">
+                <div id="progress-bar" class="gold-bg h-2.5 rounded-full transition-all duration-500"></div>
+            </div>
+            <h2 id="question-title" class="text-2xl font-bold text-center mb-6"></h2>
+            <div id="options-container" class="grid grid-cols-1 gap-4"></div>
+        </div>
+        
+        <!-- Tela de Processamento -->
+        <div id="loading-screen" class="p-8 text-center hidden fade-in">
+            <div class="flex justify-center items-center mb-4">
+                <svg class="animate-spin h-10 w-10 gold-text" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                  <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </div>
+            <h3 class="text-xl font-semibold gold-text">Analisando seu perfil olfativo...</h3>
+            <p class="mt-2">Buscando as fragrâncias perfeitas para você.</p>
+        </div>
+
+        <!-- Tela de Resultados -->
+        <div id="results-screen" class="p-6 hidden">
+             <h2 class="text-2xl font-bold text-center mb-1 gold-text font-cinzel">Sua Seleção Exclusiva</h2>
+             <p id="results-user-name" class="text-center mb-6"></p>
+            <div id="results-container" class="space-y-4"></div>
+            <button id="share-btn" class="w-full mt-8 bg-green-500 text-white font-bold py-3 px-4 rounded-lg hover:bg-green-600 transition-all duration-300 flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-whatsapp" viewBox="0 0 16 16"><path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232"/></svg>
+                Falar com o Lord no WhatsApp
+            </button>
+             <button id="restart-btn" class="w-full mt-4 border-2 gold-border gold-text font-bold py-2.5 px-4 rounded-lg hover:gold-bg hover:text-black transition-all duration-300">
+                Fazer Nova Descoberta
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // --- CONFIGURAÇÃO INICIAL ---
+        // Elementos da UI
+        const screens = { welcome: document.getElementById('welcome-screen'), question: document.getElementById('question-screen'), loading: document.getElementById('loading-screen'), results: document.getElementById('results-screen') };
+        const startBtn = document.getElementById('start-btn');
+        const userNameInput = document.getElementById('user-name');
+        const progressBar = document.getElementById('progress-bar');
+        const questionTitle = document.getElementById('question-title');
+        const optionsContainer = document.getElementById('options-container');
+        const resultsContainer = document.getElementById('results-container');
+        const resultsUserName = document.getElementById('results-user-name');
+        const shareBtn = document.getElementById('share-btn');
+        const restartBtn = document.getElementById('restart-btn');
+
+        // Perguntas do Quiz
+        const questions = [
+            { key: 'ocasiao', title: 'Para qual momento você busca um perfume?', options: [{ text: '🌞 Dia a Dia', value: 'Dia' }, { text: '🌜 Noite / Eventos', value: 'Noite' }, { text: '🔄 Ambas as Ocasiões', value: 'Ambos' }], type: 'single'},
+            { key: 'finalidade', title: 'Qual a finalidade principal?', options: [{ text: '💼 Trabalho', value: 'Trabalho' }, { text: '❤️ Encontros', value: 'Encontro' }, { text: '🎉 Balada', value: 'Balada' }, { text: '🚶‍♂️ Lazer', value: 'Lazer' }], type: 'single' },
+            { key: 'sensacao', title: 'Qual sensação você busca?', options: [{ text: '✨ Marcante', value: 'Marca Presença / Chamativo' }, { text: '🌬️ Discreto', value: 'Leve / Discreto' }, { text: '⚡ Frescor', value: 'Energia / Frescor' }, { text: '🌙 Sofisticado', value: 'Sofisticação / Mistério' }, { text: '💪 Poderoso', value: 'Confiante / Poderoso' }], type: 'single' },
+            { key: 'notas', title: 'Preferência de aroma? (Opcional)', options: [{ text: '🪵 Amadeirado', value: 'Amadeirado' }, { text: '🍋 Cítrico', value: 'Cítrico' }, { text: '🌶️ Especiado', value: 'Especiado' }, { text: '💧 Aquático', value: 'Aquático' }, { text: 'SKIP', value: 'skip' }], type: 'single' }
+        ];
+
+        let perfumeDatabase = []; // Será preenchido pela planilha
+        let currentQuestionIndex = 0;
+        let userAnswers = {};
+        let userName = '';
+        let finalRecommendations = [];
+        
+        // --- EFEITOS DE GAMIFICAÇÃO ---
+        let soundSynth;
+        // Inicializa o sintetizador de som após a primeira interação do usuário
+        function initAudio() {
+            if (!soundSynth) {
+                soundSynth = new Tone.Synth({
+                    oscillator: { type: 'sine' },
+                    envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.2 }
+                }).toDestination();
+            }
+        }
+        
+        // Função para criar a animação de perfume flutuante
+        function createPerfumePop(event) {
+            const pop = document.createElement('div');
+            pop.innerHTML = '🧴'; // Emoji de perfume
+            pop.className = 'perfume-pop';
+            document.body.appendChild(pop);
+
+            // Posição inicial do clique
+            pop.style.left = `${event.clientX}px`;
+            pop.style.top = `${event.clientY}px`;
+
+            // Remove o elemento após a animação
+            setTimeout(() => {
+                pop.remove();
+            }, 1500);
+        }
+
+        // --- LÓGICA DO BANCO DE DADOS (GOOGLE SHEETS) ---
+        // URL da sua planilha publicada como CSV
+        const SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/1HlCwgbFtre7A5G3woKHT0nFzytZG4AXUIEKjHLVRry0/export?format=csv';
+
+        // Dados estáticos para enriquecer os dados da planilha
+        const staticPerfumeData = {
+            "Sauvage Dior": { descricao: "Um clássico moderno, perfeito para quem quer marcar presença com frescor e sofisticação.", pontosForte: "Extremamente versátil e elogiado.", imagem: "https://placehold.co/300x300/1a1a1a/D4AF37?text=Sauvage", link: "#" },
+            "Bleu de Chanel": { descricao: "A definição de elegância. Ideal para o homem de negócios que não abre mão do requinte.", pontosForte: "Projeção equilibrada e fixação duradoura.", imagem: "https://placehold.co/300x300/1a1a1a/D4AF37?text=Bleu", link: "#" },
+            "Acqua di Gio": { descricao: "Uma brisa do mar engarrafada. Perfeito para dias quentes e uso casual.", pontosForte: "Refrescante e ideal para o clima brasileiro.", imagem: "https://placehold.co/300x300/1a1a1a/D4AF37?text=Acqua+di+Gio", link: "#" },
+            "Invictus Victory": { descricao: "Doce e potente. Feito para a noite e para quem não tem medo de ser o centro das atenções.", pontosForte: "Excelente para baladas, alta projeção.", imagem: "https://placehold.co/300x300/1a1a1a/D4AF37?text=Invictus", link: "#" },
+            "The One Dolce & Gabbana": { descricao: "Um perfume sedutor e intimista, ideal para encontros românticos.", pontosForte: "Aroma único e muito elogiado de perto.", imagem: "https://placehold.co/300x300/1a1a1a/D4AF37?text=The+One", link: "#" },
+            "212 VIP Black": { descricao: "O perfume da festa. Moderno, jovem e enérgico, perfeito para criar memórias.", pontosForte: "Projeta bem em ambientes de festa.", imagem: "https://placehold.co/300x300/1a1a1a/D4AF37?text=212+VIP", link: "#" },
+            "Polo Blue": { descricao: "Casual e refinado. Uma escolha segura para o dia a dia, transmitindo limpeza e confiança.", pontosForte: "Muito fácil de agradar e versátil para o dia.", imagem: "https://placehold.co/300x300/1a1a1a/D4AF37?text=Polo+Blue", link: "#" },
+            "Dior Homme Intense": { descricao: "Elegância e sofisticação em forma de perfume. O aroma de um cavalheiro moderno.", pontosForte: "Fixação e projeção impressionantes.", imagem: "https://placehold.co/300x300/1a1a1a/D4AF37?text=Dior+Homme", link: "#" }
+        };
+
+        async function loadDatabase() {
+            try {
+                const response = await fetch(SPREADSHEET_URL);
+                const csvText = await response.text();
+                const rows = csvText.split('\n').slice(1); // Pula o cabeçalho
+                
+                perfumeDatabase = rows.map(row => {
+                    const columns = row.split(',');
+                    const nome = columns[0]?.trim();
+
+                    // Mapeamento de intensidade para sensação
+                    const intensidade = columns[4]?.trim();
+                    let sensacao = [];
+                    if (intensidade === 'Forte') sensacao = ['Marca Presença / Chamativo', 'Confiante / Poderoso'];
+                    else if (intensidade === 'Moderada') sensacao = ['Sofisticação / Mistério', 'Confiante / Poderoso'];
+                    else if (intensidade === 'Leve') sensacao = ['Leve / Discreto', 'Energia / Frescor'];
+
+                    const perfumeData = {
+                        nome: nome,
+                        notas: columns[1]?.trim().split(';').map(s => s.trim()) || [],
+                        ocasiao: columns[2]?.trim().split(';').map(s => s.trim()) || [],
+                        finalidade: columns[3]?.trim().split(';').map(s => s.trim()) || [],
+                        sensacao: sensacao,
+                    };
+                    
+                    // Junta com os dados estáticos (descrição, imagem, etc.)
+                    return { ...perfumeData, ...(staticPerfumeData[nome] || {}) };
+                }).filter(p => p.nome); // Remove linhas vazias
+
+            } catch (error) {
+                console.error("Falha ao carregar a base de dados da planilha.", error);
+                // Fallback para dados locais em caso de erro
+                perfumeDatabase = Object.values(staticPerfumeData).map(p => ({ ...p, nome: Object.keys(staticPerfumeData).find(key => staticPerfumeData[key] === p) }));
+                alert("Não foi possível carregar a lista de perfumes online. Usando uma lista local.");
+            }
+        }
+
+        // --- LÓGICA DO QUIZ ---
+        function showScreen(screenId) {
+            Object.values(screens).forEach(screen => screen.classList.add('hidden'));
+            screens[screenId].classList.remove('hidden');
+            screens[screenId].classList.add('fade-in');
+        }
+
+        function startQuiz() {
+            userName = userNameInput.value.trim() || 'Lord';
+            if (userNameInput.value.trim() === '') userNameInput.value = 'Lord';
+            userAnswers = {};
+            currentQuestionIndex = 0;
+            showScreen('question');
+            displayQuestion();
+        }
+
+        function displayQuestion() {
+            const question = questions[currentQuestionIndex];
+            const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+            progressBar.style.setProperty('--progress-width', `${progress}%`);
+            progressBar.classList.add('progress-bar-inner');
+            questionTitle.textContent = question.title;
+            optionsContainer.innerHTML = '';
+            
+            question.options.forEach(option => {
+                const button = document.createElement('button');
+                button.innerHTML = option.text;
+                button.className = 'w-full p-4 border-2 gold-border text-lg rounded-lg transition-all duration-300 option-button';
+                button.onclick = (event) => selectOption(option.value, question.key, event);
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        function selectOption(value, key, event) {
+            // Efeitos de gamificação
+            if (soundSynth) soundSynth.triggerAttackRelease("C4", "8n");
+            createPerfumePop(event);
+
+            userAnswers[key] = value;
+            currentQuestionIndex++;
+            if (currentQuestionIndex < questions.length) {
+                displayQuestion();
+            } else {
+                findPerfumes();
+            }
+        }
+        
+        function findPerfumes() {
+            showScreen('loading');
+            
+            setTimeout(() => {
+                let scoredPerfumes = perfumeDatabase.map(perfume => {
+                    let score = 0;
+                    if (!perfume || !perfume.ocasiao) return { ...perfume, score: 0 };
+
+                    if (userAnswers.ocasiao === 'Ambos' || perfume.ocasiao.includes(userAnswers.ocasiao)) score += 3;
+                    if (perfume.finalidade.includes(userAnswers.finalidade)) score += 3;
+                    if(perfume.sensacao.includes(userAnswers.sensacao)) score += 2;
+                    if (userAnswers.notas !== 'skip' && perfume.notas.includes(userAnswers.notas)) score += 1;
+
+                    return { ...perfume, score };
+                });
+
+                scoredPerfumes.sort((a, b) => b.score - a.score);
+                finalRecommendations = scoredPerfumes.filter(p => p.score > 0).slice(0, 4);
+                displayResults();
+            }, 2000);
+        }
+
+        function displayResults() {
+            showScreen('results');
+            resultsUserName.textContent = `${userName}!`;
+            resultsContainer.innerHTML = '';
+
+            if (finalRecommendations.length === 0) {
+                resultsContainer.innerHTML = `<div class="bg-[#2a2a2a] p-4 rounded-lg text-center"><p class="text-lg">😕</p><p>Não encontramos uma combinação ideal. Tente novamente com outras opções!</p></div>`;
+                return;
+            }
+
+            finalRecommendations.forEach(perfume => {
+                const card = document.createElement('div');
+                card.className = 'bg-[#2a2a2a] p-4 rounded-lg shadow-lg flex flex-col sm:flex-row gap-4 fade-in';
+                card.innerHTML = `
+                    <img src="${perfume.imagem || 'https://placehold.co/300x300/1a1a1a/D4AF37?text=Lord+Aroma'}" alt="[Imagem de ${perfume.nome}]" class="w-24 h-24 object-cover rounded-lg mx-auto sm:mx-0">
+                    <div class="flex-1 text-center sm:text-left">
+                        <h3 class="text-xl font-bold gold-text">${perfume.nome}</h3>
+                        <p class="text-sm text-gray-400 mb-2">${perfume.descricao || 'Uma excelente escolha para você.'}</p>
+                        <p class="text-sm mb-3"><strong class="font-semibold text-gray-300">Pontos Fortes:</strong> ${perfume.pontosForte || 'Alta qualidade e fixação.'}</p>
+                        <a href="${perfume.link || '#'}" target="_blank" class="inline-block text-sm gold-bg text-black font-bold py-1 px-3 rounded-md hover:bg-opacity-90 transition-all">Ver Oferta</a>
+                    </div>
+                `;
+                resultsContainer.appendChild(card);
+            });
+        }
+        
+        function shareOnWhatsApp() {
+            let text = `👑 *Guia Lord Aroma* 👑\n\nOlá, ${userName}! De acordo com o seu perfil, estas são as melhores indicações de perfumes para você:\n\n`;
+            finalRecommendations.forEach((p, index) => {
+                text += `*${index + 1}. ${p.nome}*\n_${p.descricao || 'Uma fragrância marcante.'}_\n\n`;
+            });
+            text += "Quer saber mais ou garantir o seu? Fale comigo! 👇\n";
+            
+            const phoneNumber = "5583999280989";
+            const encodedText = encodeURIComponent(text);
+            const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedText}`;
+            window.open(whatsappUrl, '_blank');
+        }
+
+        function restartApp() {
+            showScreen('welcome');
+            userNameInput.value = '';
+        }
+
+        // --- INICIALIZAÇÃO DO APLICATIVO ---
+        startBtn.addEventListener('click', () => {
+            initAudio(); // Inicia o contexto de áudio
+             if (userNameInput.value.trim()) {
+                startQuiz();
+            } else {
+                userNameInput.classList.add('gold-border');
+                setTimeout(() => userNameInput.classList.remove('gold-border'), 1500);
+            }
+        });
+        shareBtn.addEventListener('click', shareOnWhatsApp);
+        restartBtn.addEventListener('click', restartApp);
+
+        // Carrega o banco de dados e inicia o app
+        window.onload = async () => {
+            await loadDatabase();
+            showScreen('welcome');
+        };
+    </script>
+</body>
+</html>
