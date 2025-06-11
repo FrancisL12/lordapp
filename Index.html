@@ -147,7 +147,7 @@
         let soundSynth;
         // Inicializa o sintetizador de som após a primeira interação do usuário
         function initAudio() {
-            if (!soundSynth) {
+            if (window.Tone && !soundSynth) {
                 soundSynth = new Tone.Synth({
                     oscillator: { type: 'sine' },
                     envelope: { attack: 0.005, decay: 0.1, sustain: 0.3, release: 0.2 }
@@ -161,22 +161,15 @@
             pop.innerHTML = '🧴'; // Emoji de perfume
             pop.className = 'perfume-pop';
             document.body.appendChild(pop);
-
-            // Posição inicial do clique
             pop.style.left = `${event.clientX}px`;
             pop.style.top = `${event.clientY}px`;
-
-            // Remove o elemento após a animação
-            setTimeout(() => {
-                pop.remove();
-            }, 1500);
+            setTimeout(() => pop.remove(), 1500);
         }
 
         // --- LÓGICA DO BANCO DE DADOS (GOOGLE SHEETS) ---
-        // URL da sua planilha publicada como CSV
-        const SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/1HlCwgbFtre7A5G3woKHT0nFzytZG4AXUIEKjHLVRry0/export?format=csv';
+        // URL da sua planilha publicada como CSV (CORRIGIDO)
+        const SPREADSHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSxpZt99KoxDXmHbwWvWCl11AEbd65900J6tF_aa3JlYpxG6v-2d0YmYq7-vZ2djafV0dotxw-okOt5/pub?output=csv';
 
-        // Dados estáticos para enriquecer os dados da planilha
         const staticPerfumeData = {
             "Sauvage Dior": { descricao: "Um clássico moderno, perfeito para quem quer marcar presença com frescor e sofisticação.", pontosForte: "Extremamente versátil e elogiado.", imagem: "https://placehold.co/300x300/1a1a1a/D4AF37?text=Sauvage", link: "#" },
             "Bleu de Chanel": { descricao: "A definição de elegância. Ideal para o homem de negócios que não abre mão do requinte.", pontosForte: "Projeção equilibrada e fixação duradoura.", imagem: "https://placehold.co/300x300/1a1a1a/D4AF37?text=Bleu", link: "#" },
@@ -191,15 +184,16 @@
         async function loadDatabase() {
             try {
                 const response = await fetch(SPREADSHEET_URL);
+                if (!response.ok) throw new Error('Network response was not ok');
                 const csvText = await response.text();
-                const rows = csvText.split('\n').slice(1); // Pula o cabeçalho
+                const rows = csvText.trim().split('\n').slice(1);
                 
                 perfumeDatabase = rows.map(row => {
-                    const columns = row.split(',');
-                    const nome = columns[0]?.trim();
+                    const columns = row.split(',').map(c => c.trim().replace(/"/g, ''));
+                    const nome = columns[0];
+                    if (!nome) return null;
 
-                    // Mapeamento de intensidade para sensação
-                    const intensidade = columns[4]?.trim();
+                    const intensidade = columns[4];
                     let sensacao = [];
                     if (intensidade === 'Forte') sensacao = ['Marca Presença / Chamativo', 'Confiante / Poderoso'];
                     else if (intensidade === 'Moderada') sensacao = ['Sofisticação / Mistério', 'Confiante / Poderoso'];
@@ -207,21 +201,18 @@
 
                     const perfumeData = {
                         nome: nome,
-                        notas: columns[1]?.trim().split(';').map(s => s.trim()) || [],
-                        ocasiao: columns[2]?.trim().split(';').map(s => s.trim()) || [],
-                        finalidade: columns[3]?.trim().split(';').map(s => s.trim()) || [],
+                        notas: columns[1]?.split(';').map(s => s.trim()) || [],
+                        ocasiao: columns[2]?.split(';').map(s => s.trim()) || [],
+                        finalidade: columns[3]?.split(';').map(s => s.trim()) || [],
                         sensacao: sensacao,
                     };
                     
-                    // Junta com os dados estáticos (descrição, imagem, etc.)
                     return { ...perfumeData, ...(staticPerfumeData[nome] || {}) };
-                }).filter(p => p.nome); // Remove linhas vazias
+                }).filter(p => p);
 
             } catch (error) {
-                console.error("Falha ao carregar a base de dados da planilha.", error);
-                // Fallback para dados locais em caso de erro
-                perfumeDatabase = Object.values(staticPerfumeData).map(p => ({ ...p, nome: Object.keys(staticPerfumeData).find(key => staticPerfumeData[key] === p) }));
-                alert("Não foi possível carregar a lista de perfumes online. Usando uma lista local.");
+                console.error("Falha ao carregar a base de dados da planilha:", error);
+                document.body.innerHTML = `<div class="text-white text-center p-8">Erro ao carregar perfumes. Verifique o link da planilha e as permissões de compartilhamento.</div>`;
             }
         }
 
@@ -259,10 +250,8 @@
         }
 
         function selectOption(value, key, event) {
-            // Efeitos de gamificação
             if (soundSynth) soundSynth.triggerAttackRelease("C4", "8n");
             createPerfumePop(event);
-
             userAnswers[key] = value;
             currentQuestionIndex++;
             if (currentQuestionIndex < questions.length) {
@@ -351,10 +340,11 @@
         shareBtn.addEventListener('click', shareOnWhatsApp);
         restartBtn.addEventListener('click', restartApp);
 
-        // Carrega o banco de dados e inicia o app
         window.onload = async () => {
             await loadDatabase();
-            showScreen('welcome');
+            if (perfumeDatabase.length > 0) {
+                showScreen('welcome');
+            }
         };
     </script>
 </body>
